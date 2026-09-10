@@ -4,6 +4,8 @@ import Credentials from "next-auth/providers/credentials";
 import { authConfig } from "@/lib/auth/auth.config";
 import { verifyPassword } from "@/lib/auth/password";
 import { prisma } from "@/lib/db/prisma";
+import { enforceRateLimit } from "@/lib/rate-limit/limiter";
+import { LOGIN_RATE_LIMIT } from "@/lib/rate-limit/policy";
 import { loginSchema } from "@/lib/validation/auth";
 
 export const { handlers, auth, signIn, signOut } = NextAuth({
@@ -18,6 +20,12 @@ export const { handlers, auth, signIn, signOut } = NextAuth({
       authorize: async (credentials) => {
         const parsed = loginSchema.safeParse(credentials);
         if (!parsed.success) return null;
+
+        await enforceRateLimit(
+          `login:${parsed.data.email}`,
+          LOGIN_RATE_LIMIT.limit,
+          LOGIN_RATE_LIMIT.windowMs,
+        );
 
         const user = await prisma.user.findUnique({
           where: { email: parsed.data.email },

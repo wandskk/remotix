@@ -1,6 +1,8 @@
 import { ApiError, notFound, validationError } from "@/lib/api/errors";
 import { buildSmsMessage, findCatalogEntry, generateCommandNonce } from "@/lib/commands/catalog";
 import { DUPLICATE_COMMAND_WINDOW_MS, MAX_ATTEMPTS, backoffMsForAttempts } from "@/lib/commands/policy";
+import { enforceRateLimit } from "@/lib/rate-limit/limiter";
+import { COMMAND_CREATE_RATE_LIMIT } from "@/lib/rate-limit/policy";
 import type { CreateCommandInput, ReportCommandFailureInput } from "@/lib/validation/command";
 import type { GatewayCredentialsInput } from "@/lib/validation/gateway";
 import * as commandRepository from "@/server/repositories/command-repository";
@@ -36,6 +38,13 @@ export async function getCommandForActor(id: string, actor: AuthenticatedSession
 export async function createCommand(input: CreateCommandInput, actor: AuthenticatedSessionUser) {
   const device = await deviceRepository.findDeviceById(input.deviceId);
   if (!device) throw notFound("Dispositivo não encontrado.");
+
+  await enforceRateLimit(
+    `command:${device.clientId}`,
+    COMMAND_CREATE_RATE_LIMIT.limit,
+    COMMAND_CREATE_RATE_LIMIT.windowMs,
+  );
+
   if (actor.role === "CLIENT" && device.clientId !== actor.clientId) {
     throw notFound("Dispositivo não encontrado.");
   }

@@ -228,3 +228,18 @@ model AuditLog {
   @@index([entityType, entityId])
   @@index([userId])
 }
+
+// Rate limiting via Postgres — sem Redis no MVP (docs/security.md).
+// `key` identifica o escopo (ex. "login:email@x.com",
+// "gateway:deviceUid", "command:clientId") e `windowStart` marca o
+// início da janela fixa; o upsert com incremento é atômico no Postgres.
+model RateLimitBucket {
+  id          String   @id @default(cuid())
+  key         String
+  windowStart DateTime
+  count       Int      @default(0)
+  createdAt   DateTime @default(now())
+
+  @@unique([key, windowStart])
+  @@index([windowStart])
+}

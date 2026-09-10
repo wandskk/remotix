@@ -5,6 +5,8 @@ import {
   generateGatewaySecret,
   isActivationCodeExpired,
 } from "@/lib/gateways/credentials";
+import { enforceRateLimit } from "@/lib/rate-limit/limiter";
+import { GATEWAY_REGISTER_RATE_LIMIT, GATEWAY_REQUEST_RATE_LIMIT } from "@/lib/rate-limit/policy";
 import { hashSecret, verifySecret } from "@/lib/security/hash";
 import type {
   CreateGatewayInput,
@@ -120,6 +122,12 @@ export async function setGatewayEnabled(
 // própria por deviceUid+secret (docs/security.md). ---
 
 export async function registerGateway(input: RegisterGatewayInput) {
+  await enforceRateLimit(
+    `gateway-register:${input.activationCode}`,
+    GATEWAY_REGISTER_RATE_LIMIT.limit,
+    GATEWAY_REGISTER_RATE_LIMIT.windowMs,
+  );
+
   const gateway = await gatewayRepository.findGatewayByActivationCode(input.activationCode);
 
   if (!gateway || isActivationCodeExpired(gateway.activationCodeExpiresAt)) {
@@ -153,6 +161,15 @@ export async function registerGateway(input: RegisterGatewayInput) {
 }
 
 export async function authenticateGateway(input: GatewayCredentialsInput) {
+  // Único ponto de entrada para toda a API do gateway (auth, heartbeat,
+  // claim, start, sent, failed) — um limite aqui cobre /api/gateway/*
+  // inteiro (docs/security.md#rate-limiting).
+  await enforceRateLimit(
+    `gateway:${input.deviceUid}`,
+    GATEWAY_REQUEST_RATE_LIMIT.limit,
+    GATEWAY_REQUEST_RATE_LIMIT.windowMs,
+  );
+
   const gateway = await gatewayRepository.findGatewayByDeviceUid(input.deviceUid);
   if (!gateway || !gateway.secretHash) throw unauthorized("Credenciais de gateway inválidas.");
 
