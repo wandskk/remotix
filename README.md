@@ -20,6 +20,7 @@ Android usa polling controlado. Ver [docs/architecture.md](docs/architecture.md)
 
 ## Documentação
 
+- [docs/product-overview.md](docs/product-overview.md) — como o sistema funciona na visão de negócio
 - [docs/architecture.md](docs/architecture.md) — visão geral, fluxo, fases
 - [docs/database.md](docs/database.md) — entidades e Prisma
 - [docs/api.md](docs/api.md) — API administrativa
