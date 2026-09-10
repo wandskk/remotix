@@ -1,9 +1,13 @@
 import { ApiError, notFound, validationError } from "@/lib/api/errors";
-import { buildSmsMessage, findCatalogEntry, generateCommandNonce } from "@/lib/commands/catalog";
+import { buildSmsMessage, extractNonce, findCatalogEntry, generateCommandNonce } from "@/lib/commands/catalog";
 import { DUPLICATE_COMMAND_WINDOW_MS, MAX_ATTEMPTS, backoffMsForAttempts } from "@/lib/commands/policy";
 import { enforceRateLimit } from "@/lib/rate-limit/limiter";
 import { COMMAND_CREATE_RATE_LIMIT } from "@/lib/rate-limit/policy";
-import type { CreateCommandInput, ReportCommandFailureInput } from "@/lib/validation/command";
+import type {
+  CreateCommandInput,
+  InboundSmsInput,
+  ReportCommandFailureInput,
+} from "@/lib/validation/command";
 import type { GatewayCredentialsInput } from "@/lib/validation/gateway";
 import * as commandRepository from "@/server/repositories/command-repository";
 import * as deviceRepository from "@/server/repositories/device-repository";
@@ -15,6 +19,7 @@ import { authenticateGateway } from "@/server/services/gateway-service";
 import { recordGatewayEvent } from "@/server/services/gateway-event-service";
 
 const IN_FLIGHT_STATUSES = ["CLAIMED", "SENDING"];
+const CONFIRMABLE_STATUSES = ["CLAIMED", "SENDING", "SENT"];
 
 export async function listCommandsForActor(actor: AuthenticatedSessionUser) {
   await commandRepository.expireStalePending();
@@ -190,4 +195,38 @@ export async function markCommandFailed(id: string, input: ReportCommandFailureI
   await recordGatewayEvent(gateway.id, "SMS_FAILED", { commandId: id, errorCode: input.errorCode });
 
   return updated;
+}
+
+// SMS enviado não significa equipamento confirmado — só a resposta do
+// equipamento, correlacionada pelo nonce, confirma o comando
+// (docs/sms-protocol.md#três-estados-diferentes-de-enviado).
+export async function processInboundSms(input: InboundSmsInput) {
+  const gateway = await authenticateGateway(input);
+
+  const nonce = extractNonce(input.message);
+  let matchedCommand = null;
+
+  if (nonce) {
+    const candidate = await commandRepository.findCommandByNonce(nonce);
+    if (candidate && candidate.gatewayId === gateway.id && CONFIRMABLE_STATUSES.includes(candidate.status)) {
+      matchedCommand = await commandRepository.updateCommand(candidate.id, {
+        status: "CONFIRMED",
+        confirmedAt: new Date(),
+      });
+    }
+  }
+
+  await smsMessageRepository.createInboundSms({
+    gatewayId: gateway.id,
+    phoneNumber: input.from,
+    message: input.message,
+    commandId: matchedCommand?.id ?? null,
+  });
+
+  await recordGatewayEvent(gateway.id, "SMS_RECEIVED", {
+    from: input.from,
+    matched: Boolean(matchedCommand),
+  });
+
+  return { matched: Boolean(matchedCommand), commandId: matchedCommand?.id };
 }

@@ -16,3 +16,14 @@ export function createOutboundSms(data: {
     data: { ...data, direction: "OUTBOUND", status: "SENT" },
   });
 }
+
+export function createInboundSms(data: {
+  gatewayId: string;
+  phoneNumber: string;
+  message: string;
+  commandId?: string | null;
+}) {
+  return prisma.smsMessage.create({
+    data: { ...data, direction: "INBOUND" },
+  });
+}

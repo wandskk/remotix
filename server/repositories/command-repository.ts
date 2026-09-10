@@ -38,6 +38,10 @@ export function findCommandById(id: string) {
   return prisma.command.findUnique({ where: { id }, include: commandListInclude });
 }
 
+export function findCommandByNonce(nonce: string) {
+  return prisma.command.findUnique({ where: { nonce } });
+}
+
 // Usado para deduplicar criação (docs — proteção contra comando
 // duplicado): mesmo dispositivo+ação, ainda em andamento, criado há
 // pouco tempo.

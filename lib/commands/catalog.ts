@@ -48,3 +48,11 @@ export function generateCommandNonce(): string {
 export function buildSmsMessage(sms: string, nonce: string): string {
   return `${sms}#${nonce}`;
 }
+
+// Extrai o nonce de uma resposta recebida (ex. "PORTAO_OK#A81F92" -> "A81F92").
+export function extractNonce(message: string): string | null {
+  const parts = message.trim().split("#");
+  if (parts.length < 2) return null;
+  const nonce = parts[parts.length - 1].trim().toUpperCase();
+  return nonce || null;
+}
