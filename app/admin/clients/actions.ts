@@ -11,7 +11,7 @@ import { requireAdmin } from "@/server/permissions/session";
 import * as clientService from "@/server/services/client-service";
 import * as userService from "@/server/services/user-service";
 
-export type FormState = { error?: string } | undefined;
+export type FormState = { error?: string; inviteUrl?: string } | undefined;
 
 function messageFor(error: unknown): string {
   if (error instanceof ApiError) return error.message;
@@ -66,20 +66,21 @@ export async function createClientUserAction(
   formData: FormData,
 ): Promise<FormState> {
   const clientId = formData.get("clientId") as string;
+  let inviteUrl: string;
   try {
     const actor = await requireAdmin();
     const input = createClientUserSchema.parse({
       name: formData.get("name"),
       email: formData.get("email"),
-      password: formData.get("password"),
     });
-    await userService.createClientUser(clientId, input, actor);
+    const { inviteToken } = await userService.createClientUser(clientId, input, actor);
+    inviteUrl = `/convite/${inviteToken}`;
   } catch (error) {
     return { error: messageFor(error) };
   }
 
   revalidatePath(`/admin/clients/${clientId}`);
-  return undefined;
+  return { inviteUrl };
 }
 
 export async function toggleClientUserActiveAction(formData: FormData) {
@@ -91,4 +92,24 @@ export async function toggleClientUserActiveAction(formData: FormData) {
   await userService.updateClientUser(clientId, userId, { active: nextActive }, actor);
 
   revalidatePath(`/admin/clients/${clientId}`);
+}
+
+export async function regenerateInviteAction(
+  _prevState: FormState,
+  formData: FormData,
+): Promise<FormState> {
+  const clientId = formData.get("clientId") as string;
+  const userId = formData.get("userId") as string;
+
+  let inviteUrl: string;
+  try {
+    const actor = await requireAdmin();
+    const { inviteToken } = await userService.regenerateInvite(clientId, userId, actor);
+    inviteUrl = `/convite/${inviteToken}`;
+  } catch (error) {
+    return { error: messageFor(error) };
+  }
+
+  revalidatePath(`/admin/clients/${clientId}`);
+  return { inviteUrl };
 }

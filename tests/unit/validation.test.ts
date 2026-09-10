@@ -3,6 +3,7 @@ import { describe, expect, it } from "vitest";
 import { loginSchema } from "@/lib/validation/auth";
 import { createClientSchema } from "@/lib/validation/client";
 import { createCommandSchema } from "@/lib/validation/command";
+import { createDeviceCommandSchema } from "@/lib/validation/device-command";
 import { heartbeatSchema } from "@/lib/validation/gateway";
 
 describe("validation schemas", () => {
@@ -24,8 +25,20 @@ describe("validation schemas", () => {
     ).toBe(false);
   });
 
-  it("createCommandSchema requires both deviceId and action", () => {
+  it("createCommandSchema requires both deviceId and deviceCommandId", () => {
     expect(createCommandSchema.safeParse({ deviceId: "d" }).success).toBe(false);
-    expect(createCommandSchema.safeParse({ deviceId: "d", action: "GATE_OPEN" }).success).toBe(true);
+    expect(createCommandSchema.safeParse({ deviceId: "d", deviceCommandId: "dc1" }).success).toBe(true);
+  });
+
+  it("createDeviceCommandSchema rejects an sms text containing '#'", () => {
+    expect(createDeviceCommandSchema.safeParse({ label: "Abrir", sms: "PORTAO#ABRIR" }).success).toBe(
+      false,
+    );
+  });
+
+  it("createDeviceCommandSchema accepts a valid label+sms pair", () => {
+    expect(createDeviceCommandSchema.safeParse({ label: "Abrir portão", sms: "PORTAO_ABRIR" }).success).toBe(
+      true,
+    );
   });
 });

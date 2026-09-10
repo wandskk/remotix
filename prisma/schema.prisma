@@ -74,9 +74,24 @@ model User {
   createdAt    DateTime @default(now())
   updatedAt    DateTime @updatedAt
 
-  auditLogs AuditLog[]
+  auditLogs   AuditLog[]
+  inviteToken InviteToken?
 
   @@index([clientId])
+}
+
+// Convite de acesso único (docs/product-overview.md#onboarding) — o admin
+// nunca define a senha do cliente; gera esse token, o cliente abre o link
+// uma vez e define a própria senha. tokenHash é SHA-256 (não bcrypt) porque
+// precisa ser buscável por igualdade a partir do token cru na URL.
+model InviteToken {
+  id        String    @id @default(cuid())
+  userId    String    @unique
+  user      User      @relation(fields: [userId], references: [id], onDelete: Cascade)
+  tokenHash String    @unique
+  expiresAt DateTime
+  usedAt    DateTime?
+  createdAt DateTime  @default(now())
 }
 
 model Client {
@@ -140,10 +155,31 @@ model Device {
   createdAt   DateTime   @default(now())
   updatedAt   DateTime   @updatedAt
 
-  commands Command[]
+  commands       Command[]
+  deviceCommands DeviceCommand[]
 
   @@index([clientId])
   @@index([gatewayId])
+}
+
+// Comando específico cadastrado pelo admin para este dispositivo/hardware
+// (docs/product-overview.md#hardware-e-comandos) — label visível ao
+// cliente + texto exato de SMS que aquele modelo de hardware espera.
+// Substitui o catálogo fixo por DeviceType: cada instalação pode ter
+// comandos e textos diferentes.
+model DeviceCommand {
+  id        String   @id @default(cuid())
+  deviceId  String
+  device    Device   @relation(fields: [deviceId], references: [id], onDelete: Cascade)
+  label     String
+  sms       String
+  active    Boolean  @default(true)
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  commands Command[]
+
+  @@index([deviceId])
 }
 
 model Command {
@@ -154,9 +190,14 @@ model Command {
   gateway   Gateway @relation(fields: [gatewayId], references: [id], onDelete: Cascade)
   deviceId  String
   device    Device  @relation(fields: [deviceId], references: [id], onDelete: Cascade)
+  // Comando específico (label + SMS) cadastrado pelo admin para este
+  // dispositivo — nulo apenas para comandos antigos criados antes desta
+  // entidade existir.
+  deviceCommandId String?
+  deviceCommand   DeviceCommand? @relation(fields: [deviceCommandId], references: [id], onDelete: SetNull)
 
-  // Ação do catálogo (ex. GATE_OPEN) — nunca definido livremente pelo
-  // frontend; resolvido no backend para `destination`/`message`.
+  // Snapshot do label no momento da criação — nunca definido livremente
+  // pelo frontend; resolvido no backend a partir do DeviceCommand.
   action      String
   type        CommandType   @default(SEND_SMS)
   destination String

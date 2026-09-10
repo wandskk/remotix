@@ -5,7 +5,9 @@ import { ClientEditForm } from "@/components/admin/client-edit-form";
 import { ClientUserForm } from "@/components/admin/client-user-form";
 import { DeviceForm } from "@/components/admin/device-form";
 import { GatewayForm } from "@/components/admin/gateway-form";
+import { ResendInviteButton } from "@/components/admin/resend-invite-button";
 import { GatewayStatusBadge } from "@/components/status/gateway-status-badge";
+import { InviteStatusBadge } from "@/components/status/invite-status-badge";
 import { toggleClientUserActiveAction } from "@/app/admin/clients/actions";
 import * as clientService from "@/server/services/client-service";
 import * as deviceService from "@/server/services/device-service";
@@ -44,36 +46,43 @@ export default async function ClientDetailPage({ params }: PageProps) {
         {users.length === 0 ? (
           <p className="mb-6 text-sm text-zinc-600 dark:text-zinc-400">Nenhum usuário cadastrado.</p>
         ) : (
-          <table className="mb-6 w-full max-w-md text-left text-sm">
+          <table className="mb-6 w-full max-w-2xl text-left text-sm">
             <thead>
               <tr className="border-b border-black/10 text-zinc-600 dark:border-white/20 dark:text-zinc-400">
                 <th className="py-2 font-medium">Nome</th>
                 <th className="py-2 font-medium">Email</th>
-                <th className="py-2 font-medium">Status</th>
+                <th className="py-2 font-medium">Conta</th>
+                <th className="py-2 font-medium">Acesso</th>
                 <th className="py-2" />
               </tr>
             </thead>
             <tbody>
               {users.map((user) => (
                 <tr key={user.id} className="border-b border-black/5 dark:border-white/10">
-                  <td className="py-2">{user.name}</td>
-                  <td className="py-2 text-zinc-600 dark:text-zinc-400">{user.email}</td>
-                  <td className="py-2">
+                  <td className="py-2 align-top">{user.name}</td>
+                  <td className="py-2 align-top text-zinc-600 dark:text-zinc-400">{user.email}</td>
+                  <td className="py-2 align-top">
                     {user.active ? (
                       <span className="text-green-700 dark:text-green-500">Ativo</span>
                     ) : (
                       <span className="text-red-700 dark:text-red-500">Inativo</span>
                     )}
                   </td>
-                  <td className="py-2">
-                    <form action={toggleClientUserActiveAction}>
-                      <input type="hidden" name="clientId" value={id} />
-                      <input type="hidden" name="userId" value={user.id} />
-                      <input type="hidden" name="nextActive" value={(!user.active).toString()} />
-                      <button type="submit" className="text-sm underline">
-                        {user.active ? "Desativar" : "Ativar"}
-                      </button>
-                    </form>
+                  <td className="py-2 align-top">
+                    <InviteStatusBadge invite={user.inviteToken} />
+                  </td>
+                  <td className="py-2 align-top">
+                    <div className="flex flex-col items-start gap-2">
+                      <form action={toggleClientUserActiveAction}>
+                        <input type="hidden" name="clientId" value={id} />
+                        <input type="hidden" name="userId" value={user.id} />
+                        <input type="hidden" name="nextActive" value={(!user.active).toString()} />
+                        <button type="submit" className="text-sm underline">
+                          {user.active ? "Desativar" : "Ativar"}
+                        </button>
+                      </form>
+                      <ResendInviteButton clientId={id} userId={user.id} />
+                    </div>
                   </td>
                 </tr>
               ))}

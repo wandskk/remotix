@@ -9,6 +9,7 @@ import {
   createClientActor,
   createTestClient,
   createTestDevice,
+  createTestDeviceCommand,
   createTestGateway,
 } from "../helpers/fixtures";
 
@@ -21,31 +22,53 @@ describe("command-service", () => {
     await cleanupAdminActors();
   });
 
-  it("creates a PENDING command resolving the action to the device's catalog SMS", async () => {
+  it("creates a PENDING command resolving the device command to its configured SMS text", async () => {
     const client = await createTestClient();
     clientId = client.id;
     const { gateway } = await createTestGateway(client.id);
     const device = await createTestDevice(client.id, gateway.id, { type: "GATE" });
+    const deviceCommand = await createTestDeviceCommand(device.id, { sms: "PORTAO_ABRIR" });
 
     const command = await commandService.createCommand(
-      { deviceId: device.id, action: "GATE_OPEN" },
+      { deviceId: device.id, deviceCommandId: deviceCommand.id },
       await createAdminActor(),
     );
 
     expect(command.status).toBe("PENDING");
     expect(command.message).toMatch(/^PORTAO_ABRIR#/);
     expect(command.destination).toBe(device.phoneNumber);
+    expect(command.action).toBe(deviceCommand.label);
   });
 
-  it("rejects an action invalid for the device type", async () => {
+  it("rejects a deviceCommandId that belongs to a different device", async () => {
     const client = await createTestClient();
     clientId = client.id;
     const { gateway } = await createTestGateway(client.id);
-    const device = await createTestDevice(client.id, gateway.id, { type: "LIGHT" });
+    const deviceA = await createTestDevice(client.id, gateway.id);
+    const deviceB = await createTestDevice(client.id, gateway.id);
+    const commandForB = await createTestDeviceCommand(deviceB.id);
 
     await expect(
-      commandService.createCommand({ deviceId: device.id, action: "GATE_OPEN" }, await createAdminActor()),
-    ).rejects.toMatchObject({ code: "VALIDATION_ERROR" });
+      commandService.createCommand(
+        { deviceId: deviceA.id, deviceCommandId: commandForB.id },
+        await createAdminActor(),
+      ),
+    ).rejects.toMatchObject({ code: "NOT_FOUND" });
+  });
+
+  it("rejects a deactivated device command", async () => {
+    const client = await createTestClient();
+    clientId = client.id;
+    const { gateway } = await createTestGateway(client.id);
+    const device = await createTestDevice(client.id, gateway.id);
+    const deviceCommand = await createTestDeviceCommand(device.id, { active: false });
+
+    await expect(
+      commandService.createCommand(
+        { deviceId: device.id, deviceCommandId: deviceCommand.id },
+        await createAdminActor(),
+      ),
+    ).rejects.toMatchObject({ code: "NOT_FOUND" });
   });
 
   it("rejects creating a command for a disabled device", async () => {
@@ -53,9 +76,13 @@ describe("command-service", () => {
     clientId = client.id;
     const { gateway } = await createTestGateway(client.id);
     const device = await createTestDevice(client.id, gateway.id, { active: false });
+    const deviceCommand = await createTestDeviceCommand(device.id);
 
     await expect(
-      commandService.createCommand({ deviceId: device.id, action: "GATE_OPEN" }, await createAdminActor()),
+      commandService.createCommand(
+        { deviceId: device.id, deviceCommandId: deviceCommand.id },
+        await createAdminActor(),
+      ),
     ).rejects.toMatchObject({ code: "DEVICE_DISABLED" });
   });
 
@@ -64,12 +91,13 @@ describe("command-service", () => {
     clientId = client.id;
     const { gateway } = await createTestGateway(client.id);
     const device = await createTestDevice(client.id, gateway.id);
+    const deviceCommand = await createTestDeviceCommand(device.id);
 
     const otherClient = await createTestClient();
     try {
       await expect(
         commandService.createCommand(
-          { deviceId: device.id, action: "GATE_OPEN" },
+          { deviceId: device.id, deviceCommandId: deviceCommand.id },
           await createClientActor(otherClient.id),
         ),
       ).rejects.toMatchObject({ code: "NOT_FOUND" });
@@ -83,9 +111,11 @@ describe("command-service", () => {
     clientId = client.id;
     const { gateway } = await createTestGateway(client.id);
     const device = await createTestDevice(client.id, gateway.id);
+    const deviceCommand = await createTestDeviceCommand(device.id);
 
-    const first = await commandService.createCommand({ deviceId: device.id, action: "GATE_OPEN" }, await createAdminActor());
-    const second = await commandService.createCommand({ deviceId: device.id, action: "GATE_OPEN" }, await createAdminActor());
+    const input = { deviceId: device.id, deviceCommandId: deviceCommand.id };
+    const first = await commandService.createCommand(input, await createAdminActor());
+    const second = await commandService.createCommand(input, await createAdminActor());
 
     expect(second.id).toBe(first.id);
   });
@@ -95,7 +125,11 @@ describe("command-service", () => {
     clientId = client.id;
     const { gateway, secret } = await createTestGateway(client.id);
     const device = await createTestDevice(client.id, gateway.id);
-    await commandService.createCommand({ deviceId: device.id, action: "GATE_OPEN" }, await createAdminActor());
+    const deviceCommand = await createTestDeviceCommand(device.id);
+    await commandService.createCommand(
+      { deviceId: device.id, deviceCommandId: deviceCommand.id },
+      await createAdminActor(),
+    );
 
     const creds = { deviceUid: gateway.deviceUid!, secret };
     const [a, b] = await Promise.all([
@@ -112,7 +146,11 @@ describe("command-service", () => {
     clientId = client.id;
     const { gateway, secret } = await createTestGateway(client.id);
     const device = await createTestDevice(client.id, gateway.id);
-    const command = await commandService.createCommand({ deviceId: device.id, action: "GATE_OPEN" }, await createAdminActor());
+    const deviceCommand = await createTestDeviceCommand(device.id);
+    const command = await commandService.createCommand(
+      { deviceId: device.id, deviceCommandId: deviceCommand.id },
+      await createAdminActor(),
+    );
     const creds = { deviceUid: gateway.deviceUid!, secret };
 
     await commandService.claimNextCommand(creds);
@@ -131,7 +169,11 @@ describe("command-service", () => {
     clientId = client.id;
     const { gateway, secret } = await createTestGateway(client.id);
     const device = await createTestDevice(client.id, gateway.id);
-    const command = await commandService.createCommand({ deviceId: device.id, action: "GATE_OPEN" }, await createAdminActor());
+    const deviceCommand = await createTestDeviceCommand(device.id);
+    const command = await commandService.createCommand(
+      { deviceId: device.id, deviceCommandId: deviceCommand.id },
+      await createAdminActor(),
+    );
     const creds = { deviceUid: gateway.deviceUid!, secret };
 
     await commandService.claimNextCommand(creds);
@@ -170,7 +212,11 @@ describe("command-service", () => {
     clientId = client.id;
     const { gateway } = await createTestGateway(client.id);
     const device = await createTestDevice(client.id, gateway.id);
-    const command = await commandService.createCommand({ deviceId: device.id, action: "GATE_OPEN" }, await createAdminActor());
+    const deviceCommand = await createTestDeviceCommand(device.id);
+    const command = await commandService.createCommand(
+      { deviceId: device.id, deviceCommandId: deviceCommand.id },
+      await createAdminActor(),
+    );
 
     await prisma.command.update({
       where: { id: command.id },
@@ -188,7 +234,11 @@ describe("command-service", () => {
     clientId = client.id;
     const { gateway, secret } = await createTestGateway(client.id);
     const device = await createTestDevice(client.id, gateway.id);
-    const command = await commandService.createCommand({ deviceId: device.id, action: "GATE_OPEN" }, await createAdminActor());
+    const deviceCommand = await createTestDeviceCommand(device.id);
+    const command = await commandService.createCommand(
+      { deviceId: device.id, deviceCommandId: deviceCommand.id },
+      await createAdminActor(),
+    );
     const creds = { deviceUid: gateway.deviceUid!, secret };
 
     await commandService.claimNextCommand(creds);
@@ -212,7 +262,11 @@ describe("command-service", () => {
     clientId = client.id;
     const { gateway, secret } = await createTestGateway(client.id);
     const device = await createTestDevice(client.id, gateway.id);
-    const command = await commandService.createCommand({ deviceId: device.id, action: "GATE_OPEN" }, await createAdminActor());
+    const deviceCommand = await createTestDeviceCommand(device.id);
+    const command = await commandService.createCommand(
+      { deviceId: device.id, deviceCommandId: deviceCommand.id },
+      await createAdminActor(),
+    );
     await prisma.command.update({ where: { id: command.id }, data: { status: "EXPIRED" } });
 
     const result = await commandService.processInboundSms({

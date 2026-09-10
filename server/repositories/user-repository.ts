@@ -1,7 +1,11 @@
 import { prisma } from "@/lib/db/prisma";
 
 export function findUsersByClient(clientId: string) {
-  return prisma.user.findMany({ where: { clientId }, orderBy: { createdAt: "desc" } });
+  return prisma.user.findMany({
+    where: { clientId },
+    include: { inviteToken: true },
+    orderBy: { createdAt: "desc" },
+  });
 }
 
 export function findUserById(id: string) {

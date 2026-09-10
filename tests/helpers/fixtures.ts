@@ -55,6 +55,20 @@ export async function createTestDevice(
   });
 }
 
+export async function createTestDeviceCommand(
+  deviceId: string,
+  overrides: Partial<{ label: string; sms: string; active: boolean }> = {},
+) {
+  return prisma.deviceCommand.create({
+    data: {
+      deviceId,
+      label: overrides.label ?? "Abrir portão",
+      sms: overrides.sms ?? "PORTAO_ABRIR",
+      active: overrides.active ?? true,
+    },
+  });
+}
+
 // AuditLog.userId tem FK real pra User — os "atores" de teste precisam
 // ser usuários de verdade, não IDs inventados, senão recordAudit()
 // (chamado por praticamente todo service) quebra por violação de FK.

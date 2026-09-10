@@ -4,7 +4,7 @@ import { gatewayCredentialsSchema } from "@/lib/validation/gateway";
 
 export const createCommandSchema = z.object({
   deviceId: z.string().min(1),
-  action: z.string().min(1),
+  deviceCommandId: z.string().min(1),
 });
 
 export const claimCommandSchema = gatewayCredentialsSchema;

@@ -1,21 +1,21 @@
 import { triggerCommandAction } from "@/app/client/actions";
 import { CommandStatusBadge } from "@/components/status/command-status-badge";
-import { getCommandCatalogForDevice } from "@/lib/commands/catalog";
 import { DEVICE_TYPE_ICONS, DEVICE_TYPE_LABELS } from "@/lib/devices/labels";
 import type { CommandStatus, DeviceType } from "@/generated/prisma/enums";
 
 type Device = { id: string; name: string; type: DeviceType; active: boolean };
 type LatestCommand = { status: CommandStatus } | undefined;
+type DeviceCommand = { id: string; label: string };
 
 export function DeviceCard({
   device,
+  deviceCommands,
   latestCommand,
 }: {
   device: Device;
+  deviceCommands: DeviceCommand[];
   latestCommand: LatestCommand;
 }) {
-  const catalog = getCommandCatalogForDevice(device.type);
-
   return (
     <div className="w-full max-w-sm rounded-lg border border-black/10 p-4 dark:border-white/20">
       <h3 className="mb-1 font-medium">
@@ -27,19 +27,19 @@ export function DeviceCard({
 
       {!device.active ? (
         <p className="text-sm text-red-700 dark:text-red-500">Dispositivo desativado.</p>
-      ) : catalog.length === 0 ? (
+      ) : deviceCommands.length === 0 ? (
         <p className="text-sm text-zinc-600 dark:text-zinc-400">Nenhum comando disponível.</p>
       ) : (
         <div className="mb-3 flex flex-wrap gap-2">
-          {catalog.map((entry) => (
-            <form key={entry.action} action={triggerCommandAction}>
+          {deviceCommands.map((dc) => (
+            <form key={dc.id} action={triggerCommandAction}>
               <input type="hidden" name="deviceId" value={device.id} />
-              <input type="hidden" name="action" value={entry.action} />
+              <input type="hidden" name="deviceCommandId" value={dc.id} />
               <button
                 type="submit"
                 className="rounded-md bg-black px-3 py-1.5 text-sm font-medium text-white dark:bg-white dark:text-black"
               >
-                {entry.label}
+                {dc.label}
               </button>
             </form>
           ))}

@@ -23,7 +23,18 @@ calculado a partir de `last_seen_at`), `last_seen_at`, `app_version`,
 
 ### Device
 O equipamento controlado (portão, luz, bomba...). Pertence a um `Client` e a
-um `Gateway`. `type`: `GATE` | `LIGHT` | `PUMP` | `ALARM` | `OTHER`.
+um `Gateway`. `type`: `GATE` | `LIGHT` | `PUMP` | `ALARM` | `OTHER` (só
+metadado de exibição — não determina mais os comandos disponíveis, ver
+`DeviceCommand`).
+
+### DeviceCommand
+Um comando específico cadastrado pelo admin para um `Device` — `label`
+(visível ao cliente) + `sms` (texto exato que o hardware espera, sem o
+nonce) + `active`. Substitui um catálogo fixo por tipo: cada instalação
+pode ter comandos e textos diferentes (docs/product-overview.md#hardware-e-comandos).
+`Command.deviceCommandId` referencia qual `DeviceCommand` originou aquele
+disparo; `Command.action` guarda uma cópia do `label` no momento da criação
+(sobrevive a uma edição/desativação posterior do `DeviceCommand`).
 
 ### Command
 Uma ação solicitada. `type` inicialmente só `SEND_SMS` (existe para permitir
@@ -40,6 +51,17 @@ Registro de cada SMS enviado ou recebido, ligado a um `Command` e a um
 Eventos do Android: `CONNECTED`, `HEARTBEAT`, `COMMAND_RECEIVED`, `SMS_SENT`,
 `SMS_FAILED`, `SMS_RECEIVED`, `APP_STARTED`, `APP_STOPPED`, `AUTH_FAILED`.
 Evitar armazenar dados desnecessários no `payload`.
+
+### InviteToken
+Convite de acesso único para um `User` `CLIENT` (docs/product-overview.md#onboarding).
+O admin nunca define a senha do cliente — cria o usuário com um hash
+inutilizável e gera um `InviteToken`; o cliente abre `/convite/[token]` uma
+vez, define a própria senha (isso atualiza `User.passwordHash` e marca
+`usedAt`), e é autenticado automaticamente. `tokenHash` é SHA-256 (não
+bcrypt) porque precisa ser buscável por igualdade a partir do token cru que
+chega na URL — bcrypt não permite isso sem varrer todos os hashes salvos.
+Gerar um novo convite (`upsert` por `userId`) substitui o anterior — é como
+o admin "reseta" o acesso do cliente.
 
 ### AuditLog
 Toda operação administrativa importante gera um registro:

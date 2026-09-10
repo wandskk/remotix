@@ -106,44 +106,20 @@ polling do Android, sem infraestrutura dedicada) já foi desenhada para
 essa escala sem necessidade de mudanças — ver
 [architecture.md](architecture.md#restrição-de-infraestrutura).
 
-## Onde isso diverge do que já está implementado hoje
+## Status desta descrição
 
-Duas partes desta descrição **ainda não correspondem exatamente** ao que
-está em produção — o sistema hoje resolve essas duas coisas de um jeito
-mais simples/rígido, e precisa de ajuste para bater com o que está
-descrito acima:
+As duas divergências identificadas quando este documento foi escrito
+(2026-09-10) já foram implementadas:
 
-### 1. Catálogo de comandos fixo por tipo de dispositivo
+1. **Comandos por dispositivo** — `DeviceCommand` (label + texto de SMS)
+   cadastrado pelo admin por `Device`, sem limite de quantidade nem
+   catálogo fixo por tipo. Ver [database.md](database.md#devicecommand) e
+   [sms-protocol.md](sms-protocol.md#catálogo-de-comandos).
+2. **Convite de acesso único** — o admin não define mais a senha do
+   cliente; cria o usuário e gera um link `/convite/[token]` (7 dias de
+   validade) que o cliente abre uma vez para definir a própria senha e é
+   autenticado automaticamente. Ver [database.md](database.md#invitetoken).
 
-Hoje (`lib/commands/catalog.ts`) os comandos disponíveis para um
-dispositivo são determinados pelo **tipo** dele (`GATE`, `LIGHT`, `PUMP`,
-`ALARM`, `OTHER`), com uma lista fixa de 2 ações e textos de SMS
-*hardcoded* no código — não configurável pelo admin. Isso não permite o
-que foi descrito: o admin cadastrando comandos específicos (label + texto
-de SMS) por cliente/hardware, podendo ter qualquer quantidade de comandos
-(não só 2), com textos diferentes por instalação.
-
-Para bater com a descrição, seria necessário: uma entidade nova
-`DeviceCommand` (ou similar) — label + ação/texto de SMS — cadastrada pelo
-admin por `Device`, substituindo (ou complementando) o catálogo fixo
-atual. O painel do cliente passaria a listar os `DeviceCommand`s do
-dispositivo em vez de resolver por `DeviceType`.
-
-### 2. Login do cliente via link único, sem convite hoje
-
-Hoje o admin cria o usuário `CLIENT` já digitando uma senha provisória
-diretamente no formulário (`components/admin/client-user-form.tsx`) — o
-cliente recebe essa senha por fora do sistema (não há geração de link,
-nem fluxo de "definir sua própria senha no primeiro acesso"). A sessão já
-é de longa duração por padrão (JWT do NextAuth, expira em 30 dias por
-padrão) — isso já bate com "manter logado depois do primeiro acesso", mas
-falta o fluxo do link de configuração inicial.
-
-Para bater com a descrição, seria necessário: gerar um token de convite
-com validade limitada ao criar o usuário CLIENT, uma página pública
-`/convite/[token]` onde o cliente define a própria senha, e enviar esse
-link por algum canal (e-mail, ou simplesmente copiável pelo admin para
-enviar manualmente, já que o sistema não tem envio de e-mail hoje).
-
-Essas duas mudanças não foram implementadas ainda — só documentadas aqui.
-Avise quando quiser que eu implemente uma delas (ou as duas).
+Ambas testadas de ponta a ponta manualmente no navegador (criar comando →
+aparece no painel do cliente; gerar convite → definir senha → sessão
+autenticada).

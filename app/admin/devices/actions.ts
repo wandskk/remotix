@@ -5,8 +5,10 @@ import { redirect } from "next/navigation";
 import { ZodError } from "zod";
 
 import { ApiError } from "@/lib/api/errors";
+import { createDeviceCommandSchema } from "@/lib/validation/device-command";
 import { createDeviceSchema, updateDeviceSchema } from "@/lib/validation/device";
 import { requireAdmin } from "@/server/permissions/session";
+import * as deviceCommandService from "@/server/services/device-command-service";
 import * as deviceService from "@/server/services/device-service";
 
 export type FormState = { error?: string } | undefined;
@@ -59,4 +61,35 @@ export async function updateDeviceAction(_prevState: FormState, formData: FormDa
   revalidatePath(`/admin/devices/${id}`);
   revalidatePath("/admin/devices");
   return undefined;
+}
+
+export async function createDeviceCommandAction(
+  _prevState: FormState,
+  formData: FormData,
+): Promise<FormState> {
+  const deviceId = formData.get("deviceId") as string;
+  try {
+    const actor = await requireAdmin();
+    const input = createDeviceCommandSchema.parse({
+      label: formData.get("label"),
+      sms: formData.get("sms"),
+    });
+    await deviceCommandService.createDeviceCommand(deviceId, input, actor);
+  } catch (error) {
+    return { error: messageFor(error) };
+  }
+
+  revalidatePath(`/admin/devices/${deviceId}`);
+  return undefined;
+}
+
+export async function toggleDeviceCommandActiveAction(formData: FormData) {
+  const deviceId = formData.get("deviceId") as string;
+  const deviceCommandId = formData.get("deviceCommandId") as string;
+  const nextActive = formData.get("nextActive") === "true";
+
+  const actor = await requireAdmin();
+  await deviceCommandService.updateDeviceCommand(deviceCommandId, { active: nextActive }, actor);
+
+  revalidatePath(`/admin/devices/${deviceId}`);
 }

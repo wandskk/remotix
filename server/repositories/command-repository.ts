@@ -43,13 +43,13 @@ export function findCommandByNonce(nonce: string) {
 }
 
 // Usado para deduplicar criação (docs — proteção contra comando
-// duplicado): mesmo dispositivo+ação, ainda em andamento, criado há
+// duplicado): mesmo dispositivo+comando, ainda em andamento, criado há
 // pouco tempo.
-export function findRecentInFlightCommand(deviceId: string, action: string, since: Date) {
+export function findRecentInFlightCommand(deviceId: string, deviceCommandId: string, since: Date) {
   return prisma.command.findFirst({
     where: {
       deviceId,
-      action,
+      deviceCommandId,
       status: { in: ["PENDING", "CLAIMED", "SENDING"] },
       createdAt: { gte: since },
     },
@@ -61,6 +61,7 @@ export function createCommand(data: {
   clientId: string;
   gatewayId: string;
   deviceId: string;
+  deviceCommandId: string;
   action: string;
   destination: string;
   message: string;

@@ -2,12 +2,14 @@ import Link from "next/link";
 import { notFound } from "next/navigation";
 
 import { cancelCommandAction, createCommandAction } from "@/app/admin/commands/actions";
+import { toggleDeviceCommandActiveAction } from "@/app/admin/devices/actions";
 import { CommandStatusBadge } from "@/components/status/command-status-badge";
+import { DeviceCommandForm } from "@/components/admin/device-command-form";
 import { DeviceEditForm } from "@/components/admin/device-edit-form";
 import { ApiError } from "@/lib/api/errors";
-import { getCommandCatalogForDevice } from "@/lib/commands/catalog";
 import { DEVICE_TYPE_LABELS } from "@/lib/devices/labels";
 import * as commandService from "@/server/services/command-service";
+import * as deviceCommandService from "@/server/services/device-command-service";
 import * as deviceService from "@/server/services/device-service";
 import * as gatewayService from "@/server/services/gateway-service";
 
@@ -25,8 +27,8 @@ export default async function DeviceDetailPage({ params }: PageProps) {
   }
 
   const gateways = await gatewayService.listClientGateways(device.clientId);
-  const catalog = getCommandCatalogForDevice(device.type);
-  const commands = await commandService.listDeviceCommands(device.id);
+  const deviceCommands = await deviceCommandService.listDeviceCommands(device.id);
+  const commands = await commandService.listCommandsForDevice(device.id);
 
   return (
     <div className="flex flex-col gap-10">
@@ -41,29 +43,70 @@ export default async function DeviceDetailPage({ params }: PageProps) {
       </div>
 
       <div>
-        <h2 className="mb-4 text-base font-semibold">
-          Comandos disponíveis ({DEVICE_TYPE_LABELS[device.type]})
-        </h2>
-        {catalog.length === 0 ? (
-          <p className="text-sm text-zinc-600 dark:text-zinc-400">
-            Nenhum comando pré-definido para este tipo de dispositivo.
+        <h2 className="mb-1 text-base font-semibold">Comandos deste dispositivo</h2>
+        <p className="mb-4 text-xs text-zinc-600 dark:text-zinc-400">
+          {DEVICE_TYPE_LABELS[device.type]} — cada comando tem um texto de SMS exato que o
+          hardware deste cliente espera receber.
+        </p>
+
+        {deviceCommands.length === 0 ? (
+          <p className="mb-6 text-sm text-zinc-600 dark:text-zinc-400">
+            Nenhum comando cadastrado ainda.
           </p>
         ) : (
-          <div className="flex flex-wrap gap-2">
-            {catalog.map((entry) => (
-              <form key={entry.action} action={createCommandAction}>
-                <input type="hidden" name="deviceId" value={device.id} />
-                <input type="hidden" name="action" value={entry.action} />
-                <button
-                  type="submit"
-                  className="rounded-md border border-black/10 px-3 py-1.5 text-sm dark:border-white/20"
-                >
-                  {entry.label}
-                </button>
-              </form>
-            ))}
-          </div>
+          <table className="mb-6 w-full max-w-xl text-left text-sm">
+            <thead>
+              <tr className="border-b border-black/10 text-zinc-600 dark:border-white/20 dark:text-zinc-400">
+                <th className="py-2 font-medium">Label</th>
+                <th className="py-2 font-medium">SMS</th>
+                <th className="py-2 font-medium">Status</th>
+                <th className="py-2" />
+                <th className="py-2" />
+              </tr>
+            </thead>
+            <tbody>
+              {deviceCommands.map((dc) => (
+                <tr key={dc.id} className="border-b border-black/5 dark:border-white/10">
+                  <td className="py-2">{dc.label}</td>
+                  <td className="py-2 font-mono text-xs text-zinc-600 dark:text-zinc-400">{dc.sms}</td>
+                  <td className="py-2">
+                    {dc.active ? (
+                      <span className="text-green-700 dark:text-green-500">Ativo</span>
+                    ) : (
+                      <span className="text-red-700 dark:text-red-500">Inativo</span>
+                    )}
+                  </td>
+                  <td className="py-2">
+                    {dc.active && (
+                      <form action={createCommandAction}>
+                        <input type="hidden" name="deviceId" value={device.id} />
+                        <input type="hidden" name="deviceCommandId" value={dc.id} />
+                        <button
+                          type="submit"
+                          className="rounded-md border border-black/10 px-2.5 py-1 text-xs dark:border-white/20"
+                        >
+                          Disparar
+                        </button>
+                      </form>
+                    )}
+                  </td>
+                  <td className="py-2">
+                    <form action={toggleDeviceCommandActiveAction}>
+                      <input type="hidden" name="deviceId" value={device.id} />
+                      <input type="hidden" name="deviceCommandId" value={dc.id} />
+                      <input type="hidden" name="nextActive" value={(!dc.active).toString()} />
+                      <button type="submit" className="text-xs underline">
+                        {dc.active ? "Desativar" : "Ativar"}
+                      </button>
+                    </form>
+                  </td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
         )}
+
+        <DeviceCommandForm deviceId={device.id} />
       </div>
 
       <div>

@@ -45,6 +45,14 @@ credencial hardcoded; validar toda resposta da API; evitar processar comando
 duplicado; validar origem das operações; nunca executar comando arbitrário
 sem autorização do backend.
 
+## Acesso do cliente
+
+O admin nunca define nem vê a senha de um usuário `CLIENT` — ele gera um
+`InviteToken` (hash SHA-256, válido 7 dias) e o cliente define a própria
+senha ao abrir `/convite/[token]` uma única vez. Gerar um novo convite
+substitui o anterior (é como o admin "reseta" o acesso caso o cliente
+perca o link ou ele expire). Ver [database.md](database.md#invitetoken).
+
 ## Segredos
 
 Nenhum secret no código-fonte. Tudo via variáveis de ambiente

@@ -2,19 +2,18 @@
 
 ## Catálogo de comandos
 
-O frontend nunca decide o texto do SMS para operações críticas — ele escolhe
-um `type` (ex. `GATE_OPEN`) e o backend traduz via catálogo:
+O frontend nunca decide o texto do SMS para operações críticas. Cada
+`Device` tem sua própria lista de `DeviceCommand` — pares *label visível ao
+cliente* + *texto exato de SMS que aquele hardware espera* — cadastrados
+pelo admin (docs/product-overview.md#hardware-e-comandos). Modelos de
+hardware diferentes podem esperar textos diferentes para a mesma ação
+física; por isso não existe uma lista fixa por tipo de dispositivo, cada
+instalação define os próprios comandos.
 
-| type | label | sms |
-|---|---|---|
-| `GATE_OPEN` | Abrir portão | `PORTAO_ABRIR` |
-| `GATE_CLOSE` | Fechar portão | `PORTAO_FECHAR` |
-| `LIGHT_ON` | Ligar iluminação | `LUZ_ON` |
-| `LIGHT_OFF` | Desligar iluminação | `LUZ_OFF` |
-| `BOMBA_ON` / `BOMBA_OFF` | Bomba | `BOMBA_ON` / `BOMBA_OFF` |
-
-O catálogo vive em `lib/commands` e permite configurar equipamentos
-diferentes no futuro sem mudar o resto do sistema.
+O cliente só vê o `label`; o `sms` cadastrado é resolvido no backend na
+hora de criar o `Command` (nunca enviado pelo frontend). Um `DeviceCommand`
+desativado (`active: false`) some do painel do cliente mas continua
+disponível no histórico/admin.
 
 ## Correlação comando ↔ resposta
 

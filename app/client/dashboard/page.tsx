@@ -5,6 +5,7 @@ import { GatewayStatusBadge } from "@/components/status/gateway-status-badge";
 import { computeGatewayStatus } from "@/lib/gateways/status";
 import { auth } from "@/lib/auth/auth";
 import * as commandService from "@/server/services/command-service";
+import * as deviceCommandService from "@/server/services/device-command-service";
 import * as deviceService from "@/server/services/device-service";
 import * as gatewayService from "@/server/services/gateway-service";
 
@@ -20,8 +21,15 @@ export default async function ClientDashboardPage() {
 
   const devicesWithLatestCommand = await Promise.all(
     devices.map(async (device) => {
-      const commands = await commandService.listDeviceCommands(device.id);
-      return { device, latestCommand: commands[0] };
+      const [commands, deviceCommands] = await Promise.all([
+        commandService.listCommandsForDevice(device.id),
+        deviceCommandService.listDeviceCommands(device.id),
+      ]);
+      return {
+        device,
+        latestCommand: commands[0],
+        deviceCommands: deviceCommands.filter((dc) => dc.active),
+      };
     }),
   );
 
@@ -50,8 +58,13 @@ export default async function ClientDashboardPage() {
           <p className="text-sm text-zinc-600 dark:text-zinc-400">Nenhum equipamento cadastrado ainda.</p>
         ) : (
           <div className="flex flex-wrap gap-4">
-            {devicesWithLatestCommand.map(({ device, latestCommand }) => (
-              <DeviceCard key={device.id} device={device} latestCommand={latestCommand} />
+            {devicesWithLatestCommand.map(({ device, deviceCommands, latestCommand }) => (
+              <DeviceCard
+                key={device.id}
+                device={device}
+                deviceCommands={deviceCommands}
+                latestCommand={latestCommand}
+              />
             ))}
           </div>
         )}

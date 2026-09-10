@@ -1,5 +1,5 @@
-import { ApiError, notFound, validationError } from "@/lib/api/errors";
-import { buildSmsMessage, extractNonce, findCatalogEntry, generateCommandNonce } from "@/lib/commands/catalog";
+import { ApiError, notFound } from "@/lib/api/errors";
+import { buildSmsMessage, extractNonce, generateCommandNonce } from "@/lib/commands/catalog";
 import { DUPLICATE_COMMAND_WINDOW_MS, MAX_ATTEMPTS, backoffMsForAttempts } from "@/lib/commands/policy";
 import { enforceRateLimit } from "@/lib/rate-limit/limiter";
 import { COMMAND_CREATE_RATE_LIMIT } from "@/lib/rate-limit/policy";
@@ -10,6 +10,7 @@ import type {
 } from "@/lib/validation/command";
 import type { GatewayCredentialsInput } from "@/lib/validation/gateway";
 import * as commandRepository from "@/server/repositories/command-repository";
+import * as deviceCommandRepository from "@/server/repositories/device-command-repository";
 import * as deviceRepository from "@/server/repositories/device-repository";
 import * as gatewayRepository from "@/server/repositories/gateway-repository";
 import * as smsMessageRepository from "@/server/repositories/sms-message-repository";
@@ -27,7 +28,7 @@ export async function listCommandsForActor(actor: AuthenticatedSessionUser) {
   return commandRepository.findCommandsByClient(actor.clientId!);
 }
 
-export function listDeviceCommands(deviceId: string) {
+export function listCommandsForDevice(deviceId: string) {
   return commandRepository.findCommandsByDevice(deviceId);
 }
 
@@ -61,13 +62,15 @@ export async function createCommand(input: CreateCommandInput, actor: Authentica
     throw new ApiError("GATEWAY_DISABLED", "O gateway deste dispositivo está desativado.");
   }
 
-  const catalogEntry = findCatalogEntry(device.type, input.action);
-  if (!catalogEntry) throw validationError("Ação inválida para este tipo de dispositivo.");
+  const deviceCommand = await deviceCommandRepository.findById(input.deviceCommandId);
+  if (!deviceCommand || deviceCommand.deviceId !== device.id || !deviceCommand.active) {
+    throw notFound("Comando não encontrado para este dispositivo.");
+  }
 
   const dedupeSince = new Date(Date.now() - DUPLICATE_COMMAND_WINDOW_MS);
   const inFlight = await commandRepository.findRecentInFlightCommand(
     device.id,
-    input.action,
+    deviceCommand.id,
     dedupeSince,
   );
   if (inFlight) return inFlight;
@@ -77,9 +80,10 @@ export async function createCommand(input: CreateCommandInput, actor: Authentica
     clientId: device.clientId,
     gatewayId: device.gatewayId,
     deviceId: device.id,
-    action: input.action,
+    deviceCommandId: deviceCommand.id,
+    action: deviceCommand.label,
     destination: device.phoneNumber,
-    message: buildSmsMessage(catalogEntry.sms, nonce),
+    message: buildSmsMessage(deviceCommand.sms, nonce),
     nonce,
   });
 
@@ -88,7 +92,7 @@ export async function createCommand(input: CreateCommandInput, actor: Authentica
     action: "COMMAND_CREATED",
     entityType: "Command",
     entityId: command.id,
-    metadata: { deviceId: device.id, action: input.action },
+    metadata: { deviceId: device.id, deviceCommandId: deviceCommand.id, label: deviceCommand.label },
   });
 
   return command;

@@ -26,8 +26,8 @@ export async function POST(request: NextRequest, { params }: RouteParams) {
     const { id } = await params;
     await clientService.getClientOrThrow(id);
     const input = createClientUserSchema.parse(await request.json());
-    const user = await userService.createClientUser(id, input, actor);
-    return apiOk(user, { status: 201 });
+    const { user, inviteToken } = await userService.createClientUser(id, input, actor);
+    return apiOk({ ...user, inviteUrl: `/convite/${inviteToken}` }, { status: 201 });
   } catch (error) {
     return apiError(error);
   }
