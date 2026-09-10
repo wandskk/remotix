@@ -1,10 +1,13 @@
 import Link from "next/link";
 import { notFound } from "next/navigation";
 
+import { cancelCommandAction, createCommandAction } from "@/app/admin/commands/actions";
+import { CommandStatusBadge } from "@/components/admin/command-status-badge";
 import { DeviceEditForm } from "@/components/admin/device-edit-form";
 import { ApiError } from "@/lib/api/errors";
 import { getCommandCatalogForDevice } from "@/lib/commands/catalog";
 import { DEVICE_TYPE_LABELS } from "@/lib/devices/labels";
+import * as commandService from "@/server/services/command-service";
 import * as deviceService from "@/server/services/device-service";
 import * as gatewayService from "@/server/services/gateway-service";
 
@@ -23,6 +26,7 @@ export default async function DeviceDetailPage({ params }: PageProps) {
 
   const gateways = await gatewayService.listClientGateways(device.clientId);
   const catalog = getCommandCatalogForDevice(device.type);
+  const commands = await commandService.listDeviceCommands(device.id);
 
   return (
     <div className="flex flex-col gap-10">
@@ -45,13 +49,64 @@ export default async function DeviceDetailPage({ params }: PageProps) {
             Nenhum comando pré-definido para este tipo de dispositivo.
           </p>
         ) : (
-          <ul className="flex max-w-md flex-col gap-1 text-sm text-zinc-600 dark:text-zinc-400">
+          <div className="flex flex-wrap gap-2">
             {catalog.map((entry) => (
-              <li key={entry.action}>
-                {entry.label} <span className="font-mono">({entry.sms})</span>
-              </li>
+              <form key={entry.action} action={createCommandAction}>
+                <input type="hidden" name="deviceId" value={device.id} />
+                <input type="hidden" name="action" value={entry.action} />
+                <button
+                  type="submit"
+                  className="rounded-md border border-black/10 px-3 py-1.5 text-sm dark:border-white/20"
+                >
+                  {entry.label}
+                </button>
+              </form>
             ))}
-          </ul>
+          </div>
+        )}
+      </div>
+
+      <div>
+        <h2 className="mb-4 text-base font-semibold">Histórico de comandos</h2>
+        {commands.length === 0 ? (
+          <p className="text-sm text-zinc-600 dark:text-zinc-400">Nenhum comando executado ainda.</p>
+        ) : (
+          <table className="w-full max-w-2xl text-left text-sm">
+            <thead>
+              <tr className="border-b border-black/10 text-zinc-600 dark:border-white/20 dark:text-zinc-400">
+                <th className="py-2 font-medium">Ação</th>
+                <th className="py-2 font-medium">Status</th>
+                <th className="py-2 font-medium">Tentativas</th>
+                <th className="py-2 font-medium">Criado em</th>
+                <th className="py-2" />
+              </tr>
+            </thead>
+            <tbody>
+              {commands.map((command) => (
+                <tr key={command.id} className="border-b border-black/5 dark:border-white/10">
+                  <td className="py-2 font-mono text-xs">{command.action}</td>
+                  <td className="py-2">
+                    <CommandStatusBadge status={command.status} />
+                  </td>
+                  <td className="py-2 text-zinc-600 dark:text-zinc-400">{command.attempts}</td>
+                  <td className="py-2 text-zinc-600 dark:text-zinc-400">
+                    {command.createdAt.toLocaleString("pt-BR")}
+                  </td>
+                  <td className="py-2">
+                    {(command.status === "PENDING" || command.status === "CLAIMED") && (
+                      <form action={cancelCommandAction}>
+                        <input type="hidden" name="id" value={command.id} />
+                        <input type="hidden" name="deviceId" value={device.id} />
+                        <button type="submit" className="text-sm underline">
+                          Cancelar
+                        </button>
+                      </form>
+                    )}
+                  </td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
         )}
       </div>
     </div>

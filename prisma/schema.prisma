@@ -167,6 +167,9 @@ model Command {
 
   status    CommandStatus @default(PENDING)
   attempts  Int           @default(0)
+  // Backoff de retry (docs/security.md#retry) — comando PENDING só é
+  // claimável quando nulo ou já no passado.
+  nextAttemptAt DateTime?
 
   createdAt   DateTime  @default(now())
   claimedAt   DateTime?
@@ -180,7 +183,7 @@ model Command {
   smsMessages SmsMessage[]
 
   @@index([clientId])
-  @@index([gatewayId, status])
+  @@index([gatewayId, status, nextAttemptAt])
   @@index([deviceId])
 }
 

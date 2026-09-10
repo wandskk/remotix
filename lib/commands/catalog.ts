@@ -1,3 +1,5 @@
+import crypto from "node:crypto";
+
 import type { DeviceType } from "@/generated/prisma/enums";
 
 // O frontend nunca escolhe o texto do SMS diretamente para operações
@@ -35,4 +37,14 @@ export function getCommandCatalogForDevice(type: DeviceType): CommandCatalogEntr
 
 export function findCatalogEntry(type: DeviceType, action: string): CommandCatalogEntry | undefined {
   return COMMAND_CATALOG[type].find((entry) => entry.action === action);
+}
+
+// Correlaciona a resposta do equipamento ao comando (docs/sms-protocol.md).
+// Ex.: PORTAO_ABRIR#A81F92 → resposta esperada PORTAO_OK#A81F92.
+export function generateCommandNonce(): string {
+  return crypto.randomBytes(4).toString("hex").toUpperCase();
+}
+
+export function buildSmsMessage(sms: string, nonce: string): string {
+  return `${sms}#${nonce}`;
 }

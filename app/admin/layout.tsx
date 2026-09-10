@@ -15,6 +15,7 @@ export default async function AdminLayout({ children }: { children: React.ReactN
           <Link href="/admin/clients">Clientes</Link>
           <Link href="/admin/gateways">Gateways</Link>
           <Link href="/admin/devices">Dispositivos</Link>
+          <Link href="/admin/commands">Comandos</Link>
         </nav>
         <div className="flex items-center gap-3 text-sm">
           <span className="text-zinc-600 dark:text-zinc-400">{session?.user?.name}</span>
