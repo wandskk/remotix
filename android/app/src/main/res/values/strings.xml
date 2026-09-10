@@ -1,0 +1,32 @@
+<resources>
+    <string name="app_name">Remotix Gateway</string>
+
+    <string name="activation_title">Ativar Gateway</string>
+    <string name="activation_subtitle">Digite o código de ativação gerado no painel Remotix</string>
+    <string name="label_base_url">URL da API</string>
+    <string name="label_activation_code">Código de ativação</string>
+    <string name="button_activate">Ativar</string>
+    <string name="activation_error_generic">Não foi possível ativar. Verifique o código e a conexão.</string>
+    <string name="activation_permissions_required">É necessário conceder as permissões de SMS e notificações para continuar.</string>
+
+    <string name="status_title">Gateway conectado</string>
+    <string name="status_client">Cliente: %1$s</string>
+    <string name="status_gateway_id">Gateway: %1$s</string>
+    <string name="status_service_running">Serviço ativo</string>
+    <string name="status_service_stopped">Serviço parado</string>
+    <string name="button_start_service">Iniciar</string>
+    <string name="button_stop_service">Parar</string>
+    <string name="button_unlink">Desvincular gateway</string>
+    <string name="unlink_confirm_title">Desvincular gateway?</string>
+    <string name="unlink_confirm_message">As credenciais salvas serão apagadas e o serviço será parado. Você vai precisar de um novo código de ativação para reconectar.</string>
+    <string name="log_title">Atividade recente</string>
+
+    <string name="notification_channel_name">Remotix Gateway</string>
+    <string name="notification_channel_description">Status do gateway de SMS em segundo plano</string>
+    <string name="notification_title">Remotix Gateway ativo</string>
+    <string name="notification_text_idle">Aguardando comandos…</string>
+    <string name="notification_text_offline">Sem conexão com a API</string>
+
+    <string name="action_cancel">Cancelar</string>
+    <string name="action_confirm">Confirmar</string>
+</resources>

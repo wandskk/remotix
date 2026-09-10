@@ -1,0 +1,11 @@
+<resources>
+    <color name="remotix_primary">#1E3A5F</color>
+    <color name="remotix_primary_dark">#122439</color>
+    <color name="remotix_accent">#2E9E6B</color>
+    <color name="remotix_background">#F5F7FA</color>
+    <color name="remotix_surface">#FFFFFF</color>
+    <color name="remotix_on_primary">#FFFFFF</color>
+    <color name="remotix_text_primary">#1B1F24</color>
+    <color name="remotix_text_secondary">#5B6572</color>
+    <color name="remotix_error">#C4392B</color>
+</resources>
