@@ -44,5 +44,11 @@ Variáveis de ambiente: copiar `.env.example` para `.env` e preencher (ver
 
 ## Estado atual
 
-Fase 1 — Fundação em andamento. Ver a ordem completa das fases em
+Em produção: [remotix.vercel.app](https://remotix.vercel.app).
+
+Fases concluídas: 1 (Fundação), 2 (Autenticação), 3 (Clientes), 4 (Gateways),
+5 (Dispositivos), 6 (Commands), 8 (SMS inbound), 9 (Dashboard do cliente),
+10 (Rate limiting), 11 (Testes), 12 (Deploy). Faltam 7 (app Android) e a
+associação entre elas (SMS inbound já funciona, mas sem o app Android real
+enviando/recebendo SMS ainda). Ver a ordem completa das fases em
 [docs/architecture.md](docs/architecture.md#ordem-de-implementação-fases).
