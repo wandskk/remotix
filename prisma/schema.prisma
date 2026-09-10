@@ -1,0 +1,225 @@
+// Remotix — schema do banco. Ver docs/database.md para o significado de
+// cada entidade e a máquina de estados de Command.
+
+generator client {
+  provider = "prisma-client"
+  output   = "../generated/prisma"
+}
+
+datasource db {
+  provider = "postgresql"
+}
+
+enum UserRole {
+  ADMIN
+  CLIENT
+}
+
+enum GatewayStatus {
+  ONLINE
+  OFFLINE
+  INACTIVE
+  DISABLED
+}
+
+enum DeviceType {
+  GATE
+  LIGHT
+  PUMP
+  ALARM
+  OTHER
+}
+
+enum CommandType {
+  SEND_SMS
+}
+
+enum CommandStatus {
+  PENDING
+  CLAIMED
+  SENDING
+  SENT
+  CONFIRMED
+  FAILED
+  EXPIRED
+  CANCELLED
+}
+
+enum SmsDirection {
+  OUTBOUND
+  INBOUND
+}
+
+enum GatewayEventType {
+  CONNECTED
+  HEARTBEAT
+  COMMAND_RECEIVED
+  SMS_SENT
+  SMS_FAILED
+  SMS_RECEIVED
+  APP_STARTED
+  APP_STOPPED
+  AUTH_FAILED
+}
+
+model User {
+  id           String   @id @default(cuid())
+  name         String
+  email        String   @unique
+  passwordHash String
+  role         UserRole
+  clientId     String?
+  client       Client?  @relation(fields: [clientId], references: [id])
+  active       Boolean  @default(true)
+  createdAt    DateTime @default(now())
+  updatedAt    DateTime @updatedAt
+
+  auditLogs AuditLog[]
+
+  @@index([clientId])
+}
+
+model Client {
+  id        String   @id @default(cuid())
+  name      String
+  document  String?  @unique
+  phone     String?
+  email     String?
+  active    Boolean  @default(true)
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  users    User[]
+  gateways Gateway[]
+  devices  Device[]
+  commands Command[]
+}
+
+model Gateway {
+  id        String        @id @default(cuid())
+  clientId  String
+  client    Client        @relation(fields: [clientId], references: [id])
+  name      String
+  deviceUid String        @unique
+  simPhone  String?
+  status    GatewayStatus @default(OFFLINE)
+
+  // Provisionamento (docs/gateway-protocol.md)
+  activationCode          String?   @unique
+  activationCodeExpiresAt DateTime?
+  secretHash              String?
+
+  lastSeenAt    DateTime?
+  appVersion    String?
+  batteryLevel  Int?
+  networkType   String?
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  devices      Device[]
+  commands     Command[]
+  events       GatewayEvent[]
+  smsMessages  SmsMessage[]
+
+  @@index([clientId])
+}
+
+model Device {
+  id          String     @id @default(cuid())
+  clientId    String
+  client      Client     @relation(fields: [clientId], references: [id])
+  gatewayId   String
+  gateway     Gateway    @relation(fields: [gatewayId], references: [id])
+  name        String
+  phoneNumber String
+  type        DeviceType
+  active      Boolean    @default(true)
+  createdAt   DateTime   @default(now())
+  updatedAt   DateTime   @updatedAt
+
+  commands Command[]
+
+  @@index([clientId])
+  @@index([gatewayId])
+}
+
+model Command {
+  id       String  @id @default(cuid())
+  clientId String
+  client   Client  @relation(fields: [clientId], references: [id])
+  gatewayId String
+  gateway   Gateway @relation(fields: [gatewayId], references: [id])
+  deviceId  String
+  device    Device  @relation(fields: [deviceId], references: [id])
+
+  // Ação do catálogo (ex. GATE_OPEN) — nunca definido livremente pelo
+  // frontend; resolvido no backend para `destination`/`message`.
+  action      String
+  type        CommandType   @default(SEND_SMS)
+  destination String
+  message     String
+  // Nonce embutido na mensagem para correlacionar a resposta do
+  // equipamento (docs/sms-protocol.md).
+  nonce       String        @unique
+
+  status    CommandStatus @default(PENDING)
+  attempts  Int           @default(0)
+
+  createdAt   DateTime  @default(now())
+  claimedAt   DateTime?
+  sentAt      DateTime?
+  confirmedAt DateTime?
+  failedAt    DateTime?
+
+  errorCode    String?
+  errorMessage String?
+
+  smsMessages SmsMessage[]
+
+  @@index([clientId])
+  @@index([gatewayId, status])
+  @@index([deviceId])
+}
+
+model SmsMessage {
+  id                 String       @id @default(cuid())
+  commandId          String?
+  command            Command?     @relation(fields: [commandId], references: [id])
+  gatewayId          String
+  gateway            Gateway      @relation(fields: [gatewayId], references: [id])
+  direction          SmsDirection
+  phoneNumber        String
+  message            String
+  status             String?
+  providerReference  String?
+  createdAt          DateTime     @default(now())
+
+  @@index([commandId])
+  @@index([gatewayId])
+}
+
+model GatewayEvent {
+  id        String           @id @default(cuid())
+  gatewayId String
+  gateway   Gateway          @relation(fields: [gatewayId], references: [id])
+  eventType GatewayEventType
+  payload   Json?
+  createdAt DateTime         @default(now())
+
+  @@index([gatewayId, eventType])
+}
+
+model AuditLog {
+  id         String   @id @default(cuid())
+  userId     String?
+  user       User?    @relation(fields: [userId], references: [id])
+  action     String
+  entityType String
+  entityId   String
+  metadata   Json?
+  createdAt  DateTime @default(now())
+
+  @@index([entityType, entityId])
+  @@index([userId])
+}
