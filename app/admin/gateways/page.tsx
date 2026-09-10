@@ -1,6 +1,6 @@
 import Link from "next/link";
 
-import { GatewayStatusBadge } from "@/components/admin/gateway-status-badge";
+import { GatewayStatusBadge } from "@/components/status/gateway-status-badge";
 import { computeGatewayStatus } from "@/lib/gateways/status";
 import * as gatewayService from "@/server/services/gateway-service";
 

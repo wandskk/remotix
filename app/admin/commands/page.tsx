@@ -1,6 +1,6 @@
 import Link from "next/link";
 
-import { CommandStatusBadge } from "@/components/admin/command-status-badge";
+import { CommandStatusBadge } from "@/components/status/command-status-badge";
 import { requireSession } from "@/server/permissions/session";
 import * as commandService from "@/server/services/command-service";
 

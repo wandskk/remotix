@@ -2,7 +2,7 @@ import Link from "next/link";
 import { notFound } from "next/navigation";
 
 import { cancelCommandAction, createCommandAction } from "@/app/admin/commands/actions";
-import { CommandStatusBadge } from "@/components/admin/command-status-badge";
+import { CommandStatusBadge } from "@/components/status/command-status-badge";
 import { DeviceEditForm } from "@/components/admin/device-edit-form";
 import { ApiError } from "@/lib/api/errors";
 import { getCommandCatalogForDevice } from "@/lib/commands/catalog";

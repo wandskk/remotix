@@ -6,7 +6,7 @@ import {
   toggleGatewayEnabledAction,
 } from "@/app/admin/gateways/actions";
 import { GatewayEditForm } from "@/components/admin/gateway-edit-form";
-import { GatewayStatusBadge } from "@/components/admin/gateway-status-badge";
+import { GatewayStatusBadge } from "@/components/status/gateway-status-badge";
 import { ApiError } from "@/lib/api/errors";
 import { isActivationCodeExpired } from "@/lib/gateways/credentials";
 import { computeGatewayStatus } from "@/lib/gateways/status";

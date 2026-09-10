@@ -5,7 +5,7 @@ import { ClientEditForm } from "@/components/admin/client-edit-form";
 import { ClientUserForm } from "@/components/admin/client-user-form";
 import { DeviceForm } from "@/components/admin/device-form";
 import { GatewayForm } from "@/components/admin/gateway-form";
-import { GatewayStatusBadge } from "@/components/admin/gateway-status-badge";
+import { GatewayStatusBadge } from "@/components/status/gateway-status-badge";
 import { toggleClientUserActiveAction } from "@/app/admin/clients/actions";
 import * as clientService from "@/server/services/client-service";
 import * as deviceService from "@/server/services/device-service";
