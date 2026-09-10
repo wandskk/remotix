@@ -69,7 +69,7 @@ model User {
   passwordHash String
   role         UserRole
   clientId     String?
-  client       Client?  @relation(fields: [clientId], references: [id])
+  client       Client?  @relation(fields: [clientId], references: [id], onDelete: Cascade)
   active       Boolean  @default(true)
   createdAt    DateTime @default(now())
   updatedAt    DateTime @updatedAt
@@ -98,7 +98,7 @@ model Client {
 model Gateway {
   id        String        @id @default(cuid())
   clientId  String
-  client    Client        @relation(fields: [clientId], references: [id])
+  client    Client        @relation(fields: [clientId], references: [id], onDelete: Cascade)
   name      String
   // Nulo até a ativação (docs/gateway-protocol.md) — o admin cria o
   // Gateway antes de qualquer aparelho existir.
@@ -130,9 +130,9 @@ model Gateway {
 model Device {
   id          String     @id @default(cuid())
   clientId    String
-  client      Client     @relation(fields: [clientId], references: [id])
+  client      Client     @relation(fields: [clientId], references: [id], onDelete: Cascade)
   gatewayId   String
-  gateway     Gateway    @relation(fields: [gatewayId], references: [id])
+  gateway     Gateway    @relation(fields: [gatewayId], references: [id], onDelete: Cascade)
   name        String
   phoneNumber String
   type        DeviceType
@@ -149,11 +149,11 @@ model Device {
 model Command {
   id       String  @id @default(cuid())
   clientId String
-  client   Client  @relation(fields: [clientId], references: [id])
+  client   Client  @relation(fields: [clientId], references: [id], onDelete: Cascade)
   gatewayId String
-  gateway   Gateway @relation(fields: [gatewayId], references: [id])
+  gateway   Gateway @relation(fields: [gatewayId], references: [id], onDelete: Cascade)
   deviceId  String
-  device    Device  @relation(fields: [deviceId], references: [id])
+  device    Device  @relation(fields: [deviceId], references: [id], onDelete: Cascade)
 
   // Ação do catálogo (ex. GATE_OPEN) — nunca definido livremente pelo
   // frontend; resolvido no backend para `destination`/`message`.
@@ -190,9 +190,9 @@ model Command {
 model SmsMessage {
   id                 String       @id @default(cuid())
   commandId          String?
-  command            Command?     @relation(fields: [commandId], references: [id])
+  command            Command?     @relation(fields: [commandId], references: [id], onDelete: SetNull)
   gatewayId          String
-  gateway            Gateway      @relation(fields: [gatewayId], references: [id])
+  gateway            Gateway      @relation(fields: [gatewayId], references: [id], onDelete: Cascade)
   direction          SmsDirection
   phoneNumber        String
   message            String
@@ -207,7 +207,7 @@ model SmsMessage {
 model GatewayEvent {
   id        String           @id @default(cuid())
   gatewayId String
-  gateway   Gateway          @relation(fields: [gatewayId], references: [id])
+  gateway   Gateway          @relation(fields: [gatewayId], references: [id], onDelete: Cascade)
   eventType GatewayEventType
   payload   Json?
   createdAt DateTime         @default(now())
@@ -218,7 +218,7 @@ model GatewayEvent {
 model AuditLog {
   id         String   @id @default(cuid())
   userId     String?
-  user       User?    @relation(fields: [userId], references: [id])
+  user       User?    @relation(fields: [userId], references: [id], onDelete: SetNull)
   action     String
   entityType String
   entityId   String
